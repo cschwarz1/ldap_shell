@@ -5,7 +5,11 @@ and
 
 https://github.com/PShlyundin/ldap_shell
 
+
+Additional functionality:
+
 - added useraccountcontrol get/set
+- removed some suspicious KDC options for opsec with MDI (shadow credentials)
 
 ## Installation
 These tools are only compatible with Python 3.5+. Clone the repository from GitHub, install the dependencies and you should be good to go:
