@@ -12,6 +12,8 @@ Get Info
     get_laps_gmsa [account] - Retrieves the LAPS and GMSA passwords associated with a given account (sAMAccountName) or for all.
     get_maq user - Get ms-DS-MachineAccountQuota for current user.
 Abuse ACL
+    get_useraccountcontrol - gets UAC flags for specified user
+    set_useraccountcontrol - sets / unsets UAC flags for specified user
     add_user_to_group user group - Adds a user to a group.
     del_user_from_group user group - Delete a user from a group.
     change_password user [password] - Attempt to change a given user's password. Requires LDAPS.

@@ -30,9 +30,10 @@ from ldap_shell import ldaptypes
 from ldap_shell.prompt import Prompt
 from ldap_shell.myPKINIT import myPKINIT
 from ldap_shell.helper import Helper
-from ldap_shell.structure import MSDS_MANAGEDPASSWORD_BLOB
+from ldap_shell.Structure import MSDS_MANAGEDPASSWORD_BLOB
 
 log = logging.getLogger('ldap-shell.shell')
+
 
 # noinspection PyMissingOrEmptyDocstring,PyPep8Naming,PyUnusedLocal
 class LdapShell(Prompt):
@@ -348,6 +349,100 @@ class LdapShell(Prompt):
                 log.info('You use kerberos auth and change self groups. Please, create new ticket and reconnect ldap_shell.')
         else:
             raise Exception(f'Failed to add user to group "{group_name}": {self.client.result["description"]}')
+
+    def do_get_useraccountcontrol(self, line):
+
+
+        controls = {"0x00000001":{"SCRIPT":"The logon script is executed."},
+        "0x00000002":{"ACCOUNTDISABLE":"The user account is disabled."},
+        "0x00000008":{"HOMEDIR_REQUIRED":"The home directory is required."},
+        "0x00000010":{"LOCKOUT":"The account is currently locked out."},
+        "0x00000020":{"PASSWD_NOTREQD":"No password is required."},
+        "0x00000040":{"PASSWD_CANT_CHANGE":"The user cannot change the password."},
+        "0x00000080":{"ENCRYPTED_TEXT_PASSWORD_ALLOWED":"The user can send an encrypted password."},
+        "0x00000100":{"TEMP_DUPLICATE_ACCOUNT":"This is an account for users whose primary account is in another domain. This account provides user access to this domain, but not to any domain that trusts this domain. Also known as a local user account."},
+        "0x00000200":{"NORMAL_ACCOUNT":"This is a default account type that represents a typical user."},
+        "0x00000800":{"INTERDOMAIN_TRUST_ACCOUNT":"This is a permit to trust account for a system domain that trusts other domains."},
+        "0x00001000":{"WORKSTATION_TRUST_ACCOUNT":"This is a computer account for a computer that is a member of this domain."},
+        "0x00002000":{"SERVER_TRUST_ACCOUNT":"This is a computer account for a system backup domain controller that is a member of this domain."},
+        "0x00010000":{"DONT_EXPIRE_PASSWD":"The password for this account will never expire."},
+        "0x00020000":{"MNS_LOGON_ACCOUNT":"This is an MNS logon account."},
+        "0x00040000":{"SMARTCARD_REQUIRED":"The user must log on using a smart card."},
+        "0x00080000":{"TRUSTED_FOR_DELEGATION":"The service account (user or computer account), under which a service runs, is trusted for Kerberos delegation. Any such service can impersonate a client requesting the service."},
+        "0x00100000":{"NOT_DELEGATED":"The security context of the user will not be delegated to a service even if the service account is set as trusted for Kerberos delegation."},
+        "0x00200000":{"USE_DES_KEY_ONLY":"Restrict this principal to use only Data Encryption Standard (DES) encryption types for keys."},
+        "0x00400000":{"DONT_REQUIRE_PREAUTH":"This account does not require Kerberos pre-authentication for logon."},
+        "0x00800000":{"PASSWORD_EXPIRED":"The user password has expired. This flag is created by the system using data from the Pwd-Last-Set attribute and the domain policy."},
+        "0x01000000":{"TRUSTED_TO_AUTHENTICATE_FOR_DELEGATION:The,account":"is enabled for delegation. This is a security-sensitive setting; accounts with this option enabled should be strictly controlled. This setting enables a service running under the account to assume a client identity and authenticate as that user to other remote servers on the network."},
+        "0x04000000":{"PARTIAL_SECRETS_ACCOUNT","The account is a read-only domain controller (RODC). It's a security-sensitive setting. Removing this setting from an RODC compromises security on that server."}}
+
+        args = shlex.split(line)
+        if len(args) != 1:
+            raise Exception('Username (SAMAccountName) must be defined')
+
+        user_name = args[0]
+
+        self.client.search(self.domain_dumper.root, f'(sAMAccountName={escape_filter_chars(user_name)})',
+                           attributes=['objectSid', 'userAccountControl'])
+        if len(self.client.entries) != 1:
+            raise Exception(f'Expected only one search result, got {len(self.client.entries)} results')
+
+        user_dn = self.client.entries[0].entry_dn
+        if not user_dn:
+            raise Exception(f'User not found in LDAP: {user_name}')
+
+        entry = self.client.entries[0]
+        userAccountControl = entry['userAccountControl'].value
+        log.info('Original userAccountControl: %s', userAccountControl)
+
+        uac = userAccountControl
+        pad = 40 
+        log.info(f'{"Name":<{pad}} {"Value":20} {"Description":}')
+        log.info(f'{"---------":<{pad}} {"----------":20} {"----------":}')
+        for i in controls.keys():
+            if int(i, 16) & int(uac):
+                for k,v in controls.get(i).items():
+                    value = i+ " (" + str(int(i,16)) + ")"
+                    log.info(f'{k:<{pad}} {value:20} {v}')
+
+
+    def do_set_useraccountcontrol(self, line):
+
+        args = shlex.split(line)
+        if len(args) != 3:
+            raise Exception('Username (SAMAccountName) attr_value and set/unset must be defined')
+
+        user_name = args[0]
+        attr_value = int(args[1])
+        attr_set = args[2]
+
+        self.client.search(self.domain_dumper.root, f'(sAMAccountName={escape_filter_chars(user_name)})',
+                           attributes=['objectSid', 'userAccountControl'])
+        if len(self.client.entries) != 1:
+            raise Exception(f'Expected only one search result, got {len(self.client.entries)} results')
+
+        user_dn = self.client.entries[0].entry_dn
+        if not user_dn:
+            raise Exception(f'User not found in LDAP: {user_name}')
+
+        entry = self.client.entries[0]
+        userAccountControl = entry['userAccountControl'].value
+        log.info('Original userAccountControl: %s', userAccountControl)
+
+        if attr_set == 'set':
+            userAccountControl = userAccountControl | attr_value
+        elif attr_set == 'unset':
+            userAccountControl = userAccountControl & ~attr_value
+        else:
+            raise Exception('select set or unset')
+
+        log.info('Updated userAccountControl: %s', userAccountControl)
+        self.client.modify(user_dn, {'userAccountControl': (ldap3.MODIFY_REPLACE, [userAccountControl])})
+
+        if self.client.result['result'] == 0:
+            log.info('Updated userAccountControl attribute successfully')
+        else:
+            self.process_error_response()
 
     def do_del_user(self, line):
         args = shlex.split(line)
