@@ -1,6 +1,10 @@
 # LDAP shell
 This project is a fork of ldap_shell (https://github.com/SecureAuthCorp/impacket/blob/master/impacket/examples/ldap_shell.py).
 
+and
+
+https://github.com/PShlyundin/ldap_shell
+
 - added useraccountcontrol get/set
 
 ## Installation
