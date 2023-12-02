@@ -1,6 +1,7 @@
 # LDAP shell
 This project is a fork of ldap_shell (https://github.com/SecureAuthCorp/impacket/blob/master/impacket/examples/ldap_shell.py).
 
+- added useraccountcontrol get/set
 
 ## Installation
 These tools are only compatible with Python 3.5+. Clone the repository from GitHub, install the dependencies and you should be good to go:
@@ -8,6 +9,8 @@ These tools are only compatible with Python 3.5+. Clone the repository from GitH
 ```bash
 git clone https://github.com/PShlyundin/ldap_shell.git
 cd ldap_shell
+virtualenv venv
+source venv/bin/activate
 python3 -m pip install .
 ```
 
@@ -30,6 +33,8 @@ Get Info
     get_laps_gmsa [computer] - Retrieves the LAPS and GMSA passwords associated with a given computer (sAMAccountName) or for all.
     get_maq user - Get ms-DS-MachineAccountQuota for current user.
 Abuse ACL
+    get_useraccountcontrol - gets UAC flags for specified user
+    set_useraccountcontrol - sets / unsets UAC flags for specified user
     add_user_to_group user group - Adds a user to a group.
     del_user_from_group user group - Delete a user from a group.
     change_password user [password] - Attempt to change a given user's password. Requires LDAPS.
