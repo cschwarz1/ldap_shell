@@ -18,6 +18,7 @@ These tools are only compatible with Python 3.5+. Clone the repository from GitH
 git clone https://github.com/PShlyundin/ldap_shell.git
 cd ldap_shell
 virtualenv venv
+pip install -r requirements.txt
 source venv/bin/activate
 python3 -m pip install .
 ```
